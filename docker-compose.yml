@@ -16,6 +16,7 @@
 # To opt out of contact or have your data removed, email compliance@defectdojo.com.
 # Details: https://defectdojo.com/privacy-policy (section 1.4)
 ---
+
 services:
   nginx:
     build:
@@ -31,17 +32,7 @@ services:
       DD_UWSGI_PORT: ${DD_UWSGI_PORT:-3031}
     volumes:
       - defectdojo_media:/usr/share/nginx/html/media
-    ports:
-      - target: 8080
-        published: ${DD_PORT:-8080}
-        protocol: tcp
-        mode: host
-      - target: 8443
-        published: ${DD_TLS_PORT:-8443}
-        protocol: tcp
-        mode: host
     labels:
-      - traefik.docker.network=dokploy-network
       - traefik.http.routers.aspmsiem-defectdojo-hdjdxi-123-web.rule=Host(`aspm.goinnovior.com`)
       - traefik.http.routers.aspmsiem-defectdojo-hdjdxi-123-web.entrypoints=web
       - traefik.http.services.aspmsiem-defectdojo-hdjdxi-123-web.loadbalancer.server.port=8080
@@ -52,10 +43,12 @@ services:
       - traefik.http.services.aspmsiem-defectdojo-hdjdxi-123-websecure.loadbalancer.server.port=8080
       - traefik.http.routers.aspmsiem-defectdojo-hdjdxi-123-websecure.service=aspmsiem-defectdojo-hdjdxi-123-websecure
       - traefik.http.routers.aspmsiem-defectdojo-hdjdxi-123-websecure.tls.certresolver=letsencrypt
+      - traefik.docker.network=dokploy-network
       - traefik.enable=true
     networks:
       - dokploy-network
       - default
+
   uwsgi:
     build:
       context: ./
@@ -83,14 +76,17 @@ services:
       DD_DATABASE_URL: ${DD_DATABASE_URL:-postgresql://defectdojo:defectdojo@postgres:5432/defectdojo}
       DD_CELERY_BROKER_URL: ${DD_CELERY_BROKER_URL:-redis://valkey:6379/0}
       DD_CACHE_URL: ${DD_CACHE_URL:-redis://valkey:6379/1}
-      DD_SECRET_KEY: ${DD_SECRET_KEY:-hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq}
-      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:-&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw}
+      DD_SECRET_KEY: ${DD_SECRET_KEY:?Set DD_SECRET_KEY in Dokploy}
+      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:?Set DD_CREDENTIAL_AES_256_KEY in Dokploy}
       DD_DATABASE_READINESS_TIMEOUT: ${DD_DATABASE_READINESS_TIMEOUT:-30}
     volumes:
       - type: bind
         source: ./docker/extra_settings
         target: /app/docker/extra_settings
       - defectdojo_media:${DD_MEDIA_ROOT:-/app/media}
+    networks:
+      - default
+
   celerybeat:
     image: ${DD_IMAGE_REGISTRY:-registry.defectdojo.com}/defectdojo/defectdojo-django:${DJANGO_VERSION:-latest}
     depends_on:
@@ -111,13 +107,16 @@ services:
       DD_DATABASE_URL: ${DD_DATABASE_URL:-postgresql://defectdojo:defectdojo@postgres:5432/defectdojo}
       DD_CELERY_BROKER_URL: ${DD_CELERY_BROKER_URL:-redis://valkey:6379/0}
       DD_CACHE_URL: ${DD_CACHE_URL:-redis://valkey:6379/1}
-      DD_SECRET_KEY: ${DD_SECRET_KEY:-hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq}
-      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:-&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw}
+      DD_SECRET_KEY: ${DD_SECRET_KEY:?Set DD_SECRET_KEY in Dokploy}
+      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:?Set DD_CREDENTIAL_AES_256_KEY in Dokploy}
       DD_DATABASE_READINESS_TIMEOUT: ${DD_DATABASE_READINESS_TIMEOUT:-30}
     volumes:
       - type: bind
         source: ./docker/extra_settings
         target: /app/docker/extra_settings
+    networks:
+      - default
+
   celeryworker:
     image: ${DD_IMAGE_REGISTRY:-registry.defectdojo.com}/defectdojo/defectdojo-django:${DJANGO_VERSION:-latest}
     depends_on:
@@ -138,14 +137,17 @@ services:
       DD_DATABASE_URL: ${DD_DATABASE_URL:-postgresql://defectdojo:defectdojo@postgres:5432/defectdojo}
       DD_CELERY_BROKER_URL: ${DD_CELERY_BROKER_URL:-redis://valkey:6379/0}
       DD_CACHE_URL: ${DD_CACHE_URL:-redis://valkey:6379/1}
-      DD_SECRET_KEY: ${DD_SECRET_KEY:-hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq}
-      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:-&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw}
+      DD_SECRET_KEY: ${DD_SECRET_KEY:?Set DD_SECRET_KEY in Dokploy}
+      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:?Set DD_CREDENTIAL_AES_256_KEY in Dokploy}
       DD_DATABASE_READINESS_TIMEOUT: ${DD_DATABASE_READINESS_TIMEOUT:-30}
     volumes:
       - type: bind
         source: ./docker/extra_settings
         target: /app/docker/extra_settings
       - defectdojo_media:${DD_MEDIA_ROOT:-/app/media}
+    networks:
+      - default
+
   initializer:
     image: ${DD_IMAGE_REGISTRY:-registry.defectdojo.com}/defectdojo/defectdojo-django:${DJANGO_VERSION:-latest}
     depends_on:
@@ -159,35 +161,47 @@ services:
     environment:
       DD_DATABASE_URL: ${DD_DATABASE_URL:-postgresql://defectdojo:defectdojo@postgres:5432/defectdojo}
       DD_ADMIN_USER: ${DD_ADMIN_USER:-admin}
-      DD_ADMIN_MAIL: ${DD_ADMIN_USER:-admin@defectdojo.local}
+      DD_ADMIN_MAIL: ${DD_ADMIN_MAIL:-admin@defectdojo.local}
       DD_ADMIN_FIRST_NAME: ${DD_ADMIN_FIRST_NAME:-Admin}
       DD_ADMIN_LAST_NAME: ${DD_ADMIN_LAST_NAME:-User}
       DD_INITIALIZE: ${DD_INITIALIZE:-true}
-      DD_SECRET_KEY: ${DD_SECRET_KEY:-hhZCp@D28z!n@NED*yB!ROMt+WzsY*iq}
-      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:-&91a*agLqesc*0DJ+2*bAbsUZfR*4nLw}
+      DD_SECRET_KEY: ${DD_SECRET_KEY:?Set DD_SECRET_KEY in Dokploy}
+      DD_CREDENTIAL_AES_256_KEY: ${DD_CREDENTIAL_AES_256_KEY:?Set DD_CREDENTIAL_AES_256_KEY in Dokploy}
       DD_DATABASE_READINESS_TIMEOUT: ${DD_DATABASE_READINESS_TIMEOUT:-30}
     volumes:
       - type: bind
         source: ./docker/extra_settings
         target: /app/docker/extra_settings
+    networks:
+      - default
+
   postgres:
     image: postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     environment:
       PGDATA: /var/lib/postgresql/data
       POSTGRES_DB: ${DD_DATABASE_NAME:-defectdojo}
       POSTGRES_USER: ${DD_DATABASE_USER:-defectdojo}
-      POSTGRES_PASSWORD: ${DD_DATABASE_PASSWORD:-defectdojo}
+      POSTGRES_PASSWORD: ${DD_DATABASE_PASSWORD:?Set DD_DATABASE_PASSWORD in Dokploy}
     volumes:
       - defectdojo_postgres:/var/lib/postgresql/data
+    networks:
+      - default
+
   valkey:
     image: valkey/valkey:9.1.2-alpine@sha256:48332870af354a799964c0012ae1194a0bf2bf894eb508f945810596dc2d8d11
     volumes:
       - defectdojo_redis:/data
+    networks:
+      - default
+
 volumes:
   defectdojo_postgres: {}
   defectdojo_media: {}
   defectdojo_redis: {}
+
 networks:
   dokploy-network:
     external: true
+  default:
+    driver: bridge
 
