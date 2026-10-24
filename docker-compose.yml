@@ -203,5 +203,6 @@ networks:
   dokploy-network:
     external: true
   default:
+    name: aspmsiem-defectdojo-hdjdxi_default
     driver: bridge
 
